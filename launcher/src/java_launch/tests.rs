@@ -121,6 +121,23 @@ fn a_modern_version_gets_its_rules_placeholders_and_classpath() {
     );
     assert_eq!(cmd.get_current_dir(), Some(game.as_path()));
 
+    let offline_player = Player {
+        name: "pizza".into(),
+        uuid: crate::sklauncher::offline_uuid("pizza"),
+        token: String::new(),
+        xuid: String::new(),
+    };
+    let mut offline_launch = launch("linux");
+    offline_launch.player = &offline_player;
+    let offline_args = args(&command(&modern(), &offline_launch).unwrap());
+    let value =
+        |flag| offline_args[offline_args.iter().position(|v| v == flag).unwrap() + 1].as_str();
+    assert_eq!(value("--userType"), "legacy");
+    assert_eq!(value("--username"), "pizza");
+    assert_eq!(value("--accessToken"), "");
+    assert_eq!(value("--xuid"), "");
+    assert!(!offline_args.iter().any(|v| v == "mc-token" || v == "msa"));
+
     let linux = args(&command(&modern(), &launch("linux")).unwrap());
     assert!(!linux.contains(&"-XstartOnFirstThread".into()));
     assert!(linux.iter().any(|x| x.contains("not-mac-1.jar")));
@@ -189,7 +206,7 @@ fn an_old_version_gets_its_natives_and_assets_by_name() {
     let a = args(&command(&version, &launch).unwrap());
     assert_eq!(fs::read(natives.join("liblwjgl.dylib")).unwrap(), b"lib");
     assert!(!natives.join("META-INF").exists());
-    let virtual_dir = under(&mc, "assets/virtual/1.8");
+    let virtual_dir = under(&game, "assets/virtual/1.8");
     assert_eq!(
         fs::read(virtual_dir.join("sounds/step/grass1.ogg")).unwrap(),
         b"ogg"
@@ -409,5 +426,31 @@ fn server_addresses_split_into_host_and_port() {
     assert_eq!(
         host_and_port("mc.example.org:x"),
         ("mc.example.org:x", 25565)
+    );
+}
+
+#[test]
+fn installed_loader_libraries_resolve_maven_coordinates() {
+    let root = PathBuf::from("minecraft");
+    let version = json!({"id":"fabric-loader-0.19.5-26.3","jar":"26.3","libraries":[
+        {"name":"net.fabricmc:fabric-loader:0.19.5","url":"https://maven.fabricmc.net/"},
+        {"name":"org.ow2.asm:asm:9.10.1","url":"https://maven.fabricmc.net/"},
+        {"name":"org.slf4j:slf4j-api:2.0.17","downloads":{"artifact":{"url":"https://libraries.minecraft.net/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar"}}},
+        {"name":"native:only:1","downloads":{"classifiers":{}}}
+    ]});
+    assert_eq!(
+        classpath(&version, &root, "linux").unwrap(),
+        [
+            under(
+                &root,
+                "libraries/net/fabricmc/fabric-loader/0.19.5/fabric-loader-0.19.5.jar"
+            ),
+            under(&root, "libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar"),
+            under(
+                &root,
+                "libraries/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar"
+            ),
+            under(&root, "versions/26.3/26.3.jar"),
+        ]
     );
 }

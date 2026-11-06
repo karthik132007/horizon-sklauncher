@@ -1,0 +1,19 @@
+#!/bin/sh
+# Portable launcher; game data is never stored in the downloaded bundle.
+set -eu
+bundle_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+data_root="${XDG_DATA_HOME:-$HOME/.local/share}/horizon-sklauncher"
+export HORIZON_LAUNCHER_HOME="${HORIZON_LAUNCHER_HOME:-$data_root/launcher}"
+export HORIZON_HOME="${HORIZON_HOME:-$data_root/game}"
+export HORIZON_LAUNCHER_NO_SELF_UPDATE=1
+export HORIZON_TELEMETRY_URL=off
+mkdir -p "$HORIZON_LAUNCHER_HOME" "$HORIZON_HOME"
+# Register only this fork's wrapper through install.sh; never a raw self-updating binary.
+if [ ! -e "$HORIZON_LAUNCHER_HOME/settings.json" ]; then
+    (umask 077; set -C; cat > "$HORIZON_LAUNCHER_HOME/settings.json" <<'EOF'
+{"desktop_entry":false,"install_new_versions":false,"skip_opening":true,"mods_auto_update":false}
+EOF
+    ) 2>/dev/null || true
+fi
+cd "$HORIZON_HOME"
+exec "$bundle_dir/horizon-launcher" "$@"

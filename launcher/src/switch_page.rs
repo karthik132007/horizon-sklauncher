@@ -173,6 +173,29 @@ impl Launcher {
         }
     }
 
+    /// Import installed SKlauncher profiles without changing the source installation.
+    pub(super) fn sklauncher_import_button(&self, cx: &mut Context<Self>) -> Stateful<Div> {
+        button(
+            "sklauncher-import",
+            "Import from SKlauncher",
+            Kind::Secondary,
+            &self.theme,
+        )
+        .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+            if this.sklauncher_importing {
+                return;
+            }
+            this.sklauncher_importing = true;
+            let tx = this.tx.clone();
+            std::thread::spawn(move || {
+                let _ = tx.send(Msg::SklauncherImported(
+                    horizon_launcher::sklauncher::import_all(),
+                ));
+            });
+            cx.notify();
+        }))
+    }
+
     /// Enter in the offline name field.
     pub(super) fn offline_name_enter(&mut self) {
         self.add_offline_name();
@@ -182,7 +205,10 @@ impl Launcher {
     /// and Forget, then a field to add one.
     pub(super) fn offline_rows(&mut self, mut n: usize, cx: &mut Context<Self>) -> (Div, usize) {
         let t = self.theme;
-        let mut rows = div().flex().flex_col();
+        let mut rows = div()
+            .flex()
+            .flex_col()
+            .child(self.sklauncher_import_button(cx));
         let now = self.accounts.player();
         for (i, name) in self.accounts.offline.clone().into_iter().enumerate() {
             let plays = now == Player::Offline(name.clone());

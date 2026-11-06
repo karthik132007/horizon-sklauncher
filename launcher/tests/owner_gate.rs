@@ -17,7 +17,7 @@ fn home(name: &str) -> PathBuf {
     std::fs::write(version.join(".installed"), "").unwrap();
     std::fs::write(
         root.join("launcher/accounts.json"),
-        r#"{"accounts":[],"selected":null,"offline":["Builder_1"],"offline_selected":"Builder_1"}"#,
+        r#"{"accounts":[],"selected":null,"offline":["Builder_1"],"offline_selected":null}"#,
     )
     .unwrap();
     root
@@ -86,4 +86,21 @@ fn the_mcp_server_refuses_to_play_without_an_owner() {
     let said = reply["result"]["content"][0]["text"].as_str().unwrap();
     assert!(said.contains(REFUSED), "{said}");
     let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn an_explicit_offline_profile_passes_authentication_without_a_session() {
+    let root = home("offline");
+    std::fs::write(
+        root.join("launcher/accounts.json"),
+        r#"{"accounts":[],"selected":null,"offline":["Builder_1"],"offline_selected":"Builder_1"}"#,
+    )
+    .unwrap();
+    let out = launcher(&root, &["play"]).output().unwrap();
+    let said = text(&out);
+    // The fixture isn't prepared, but the failure must be preparation rather than Microsoft.
+    assert!(!out.status.success(), "{said}");
+    assert!(!said.contains(REFUSED), "{said}");
+    assert!(!root.join("game/sessions").exists());
+    let _ = std::fs::remove_dir_all(root);
 }

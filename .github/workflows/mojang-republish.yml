@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: mojang republish
 # Hourly: does Mojang's version manifest list a pinned-version JSON that research-lock.json does not know?
 # If so, one issue "Mojang republished <version>: <sha8>" with the hashes and a lock snippet
@@ -21,6 +22,7 @@ concurrency:
 
 jobs:
   check:
+    if: github.repository == 'horizon-rust/horizon'
     # One of our small runners (label horizon-light, docs/ci-runners.md): main's script, Mojang's public manifest.
     runs-on: ${{ vars.SELF_HOSTED_CI != 'off' && fromJSON('["self-hosted", "linux", "horizon-light"]') || 'ubuntu-latest' }}
     timeout-minutes: 10

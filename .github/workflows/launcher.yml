@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: launcher
 # Builds the launcher on Linux, macOS, Windows x64 and ARM64, and releases it by itself (docs/release-flow.md): after a
 # push to main that changes the launcher or a crate it builds in (the paths below),
@@ -65,6 +66,7 @@ env:
 
 jobs:
   decide:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -101,7 +103,7 @@ jobs:
 
   build:
     needs: decide
-    if: needs.decide.outputs.release == 'true'
+    if: github.repository == 'horizon-rust/horizon' && (needs.decide.outputs.release == 'true')
     name: build ${{ matrix.name }}
     # Windows ARM64 is new: its failure never holds the other platforms' release (the signing job
     # needs this job, and a failed entry of it would fail it). The release steps leave the missing
@@ -331,6 +333,7 @@ jobs:
         run: ../packaging/macos/keychain.sh lock
 
   sign:
+    if: github.repository == 'horizon-rust/horizon'
     needs: [decide, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -370,6 +373,7 @@ jobs:
           retention-days: 3
 
   release:
+    if: github.repository == 'horizon-rust/horizon'
     needs: [decide, build, sign]
     runs-on: ubuntu-latest
     timeout-minutes: 15

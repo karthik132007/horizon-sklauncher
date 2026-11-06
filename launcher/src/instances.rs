@@ -179,6 +179,9 @@ pub struct JavaGame {
     /// The mod loader it plays with, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loader: Option<crate::loaders::Loader>,
+    /// Existing launcher files, read only; the game itself always uses this instance's copy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_install: Option<crate::sklauncher::Installation>,
     /// The game window's size, width then height; none: the game's own 854×480.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub window: Option<(u32, u32)>,

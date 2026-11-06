@@ -2034,9 +2034,16 @@ pub fn java_game(
         )
     })?;
     let player = account::java_player()?;
-    let minecraft = data_dir().join("minecraft");
+    let minecraft = game
+        .local_install
+        .as_ref()
+        .map_or_else(|| data_dir().join("minecraft"), |i| i.minecraft_dir.clone());
     let id = mojang::relative(&game.minecraft)?;
-    let natives = minecraft.join("natives").join(&id);
+    // Never unpack or download anything into another launcher's installation.
+    let natives = data_dir()
+        .join("minecraft/natives")
+        .join(&instance.id)
+        .join(&id);
     // Each version and loader profile is fetched once; it then starts offline too.
     let downloaded = |id: &str| -> Result<PathBuf, String> {
         Ok(minecraft
@@ -2045,7 +2052,7 @@ pub fn java_game(
             .join(".downloaded"))
     };
     let marker = downloaded(&game.minecraft)?;
-    if !marker.is_file() {
+    if game.local_install.is_none() && !marker.is_file() {
         let listed = crate::minecraft_versions::load()?;
         let version = listed.find(&game.minecraft)?;
         download_version_for_owner(&version.id, &version.sha1, log)?;
@@ -2058,7 +2065,11 @@ pub fn java_game(
             .join(mojang::relative(id)?)
             .join(format!("{id}.json")))
     };
-    let vanilla = crate::java_launch::read(&file(&game.minecraft)?)?;
+    let installed_id = game
+        .local_install
+        .as_ref()
+        .map_or(game.minecraft.as_str(), |i| i.version_id.as_str());
+    let vanilla = crate::java_launch::read(&file(installed_id)?)?;
     let need = crate::java::Need::of(&crate::java_launch::resolve(vanilla, &minecraft)?);
     let found = crate::java::pick(
         &need,
@@ -2073,8 +2084,12 @@ pub fn java_game(
             crate::java::install(&need, log)?
         }
     };
-    let mut start = game.minecraft.clone();
-    if let Some(loader) = &game.loader {
+    let mut start = installed_id.to_string();
+    if let Some(loader) = game
+        .loader
+        .as_ref()
+        .filter(|_| game.local_install.is_none())
+    {
         start = loader.kind.profile_id(&loader.version, &game.minecraft);
         let marker = downloaded(&start)?;
         if !marker.is_file() {
@@ -2091,6 +2106,15 @@ pub fn java_game(
     }
     let version =
         crate::java_launch::resolve(crate::java_launch::read(&file(&start)?)?, &minecraft)?;
+    if game.local_install.is_some() {
+        for file in
+            crate::java_launch::classpath(&version, &minecraft, crate::java_launch::os_name())?
+        {
+            if !file.is_file() {
+                return Err(format!("Installed game file is missing: {}. Repair this version in SKlauncher, then try again.", file.display()));
+            }
+        }
+    }
     let jvm_args: Vec<String> = game.jvm_args.split_whitespace().map(String::from).collect();
     fs::create_dir_all(&instance.home).map_err(|e| format!("{}: {e}", instance.home.display()))?;
     crate::java_launch::command(
@@ -4038,6 +4062,7 @@ pub enum Msg {
     /// None when secrets are kept in the OS keychain, else what to say: they last only until
     /// the launcher closes, and why.
     Keychain(Option<String>),
+    SklauncherImported(Result<usize, String>),
     /// Whether an account in the launcher owned the game at its last check (the owner gate).
     Owner(bool),
     /// Credential-free result from a background account operation.

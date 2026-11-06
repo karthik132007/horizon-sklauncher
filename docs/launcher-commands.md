@@ -198,13 +198,21 @@ MCP: `account_select`.
 
 ## `horizon-launcher account offline`
 
-Play offline (LAN, offline-mode servers) beside a signed-in account that owns the game: as NAME (kept to switch back to; 3 to 16 letters, digits or _), or as the name the game made up.
+Play as a local profile (single player, LAN, offline-mode servers), without Microsoft: as NAME (kept to switch back to; 3 to 16 letters, digits or _), or as the name the game made up.
 
     horizon-launcher account offline [NAME]
 
 - `NAME`
 
 MCP: `account_offline`.
+
+## `horizon-launcher account import-sklauncher`
+
+Import local offline names and installed Java instances from SKlauncher (no tokens).
+
+    horizon-launcher account import-sklauncher
+
+MCP: `account_import_sklauncher`.
 
 ## `horizon-launcher account forget-offline`
 

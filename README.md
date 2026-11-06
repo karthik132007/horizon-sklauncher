@@ -1,3 +1,66 @@
+# Horizon SKlauncher edition
+
+Unofficial community fork of [Horizon](https://github.com/horizon-rust/horizon), adding
+local/offline profiles and read-only import of installed SKlauncher 4 profiles.
+The original Horizon project is by Ludovic Marie and its contributors. This fork is
+not affiliated with Horizon's maintainers, SKlauncher, Mojang, or Microsoft.
+
+**[Download for Linux x86-64](https://github.com/karthik132007/horizon-sklauncher/releases/latest)**
+· [Setup and limitations](launcher/SKLAUNCHER.md)
+
+## Download and run
+
+1. Download `horizon-sklauncher-linux-x86_64.tar.gz` from Releases and extract it.
+2. Run `./horizon-sklauncher` inside the extracted folder.
+3. To add the applications-menu and Desktop shortcuts, run `./install.sh` (no root).
+4. Open Settings → Account → **Import from SKlauncher** to copy installed Java
+   instances, or create an offline name manually. Profile switching is in the top bar.
+
+The launcher reuses installed version jars, libraries, assets and a compatible Java
+runtime. Writable game content (worlds, mods, options, packs) is copied into Horizon's
+own folder; SKlauncher's instance is not used as the writable game folder.
+
+The initial prebuilt release targets **Arch Linux x86-64 and compatible recent Linux
+systems**. It was built on Arch, requires glibc **2.44+**, and is not a universal Linux
+binary. Windows, macOS and ARM binaries are not included. Build from source on other
+systems using the upstream instructions below and [the fork guide](launcher/SKLAUNCHER.md).
+
+This download contains the launcher only. **Bring your own Minecraft installation**;
+no Minecraft files, accounts, tokens, worlds or mods are distributed. Offline profiles
+work in offline-compatible environments; Realms and authenticated servers require a
+legitimate Microsoft account. Microsoft mode remains implemented, but source/release
+builds need an approved `HORIZON_MSA_CLIENT_ID` as described in
+[upstream's account documentation](docs/microsoft-account.md).
+
+The portable wrapper disables self-updates, so it cannot silently replace this fork
+with upstream Horizon. It also disables telemetry transmission. Native Rust Horizon
+builds still come from the upstream project and do not run Java Fabric/Forge mods;
+the separate Java-instance launch path supports those installed profiles.
+
+## Build this fork
+
+```sh
+git clone https://github.com/karthik132007/horizon-sklauncher.git
+cd horizon-sklauncher
+cargo build --release --locked --manifest-path launcher/Cargo.toml
+./launcher/start-local.sh
+```
+
+`packaging/sklauncher/package.sh` makes the Linux release archive and checksums from
+that build. `.github/workflows/sklauncher-build.yml` provides a manual build workflow;
+upstream's maintenance/release jobs are restricted to the upstream repository and
+do not execute in this community fork.
+
+License: MIT for Horizon's original code and this fork's changes; dependency licenses
+remain applicable. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
+
+---
+
+## Original Horizon README
+
+The documentation below describes upstream Horizon, including upstream download links
+and Microsoft-account requirements. The offline-profile changes above apply to this fork.
+
 <p align="center">
   <img src="docs/media/banner.webp" alt="The Horizon website: the game you know, rebuilt in Rust" width="100%">
 </p>

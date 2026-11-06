@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: nightly audit
 # Every vanilla harness, from scratch, on main, at 03:00 Paris time on the Mac mini's runner (it holds the
 # maintainer's own Minecraft files). The resources are prepared again first when the preparer or its exporters
@@ -29,6 +30,7 @@ env:
 
 jobs:
   audit:
+    if: github.repository == 'horizon-rust/horizon'
     # The Mac mini's runners only: the audit compares with the previous one, so it stays on one platform.
     runs-on: [self-hosted, horizon-game, macOS]
     timeout-minutes: 240  # every harness (~80 min) plus lan_integration (~40 min an attempt under load, retried)

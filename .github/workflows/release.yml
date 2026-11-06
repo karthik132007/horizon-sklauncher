@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: release
 # Automatic game releases (docs/release-flow.md). Horizon ships only the Nightly since 2026-10-28 (Ludovic): this
 # workflow is the batch train that decides when a new Nightly goes out, and `nightly build` (nightly-build.yml) builds,
@@ -43,8 +44,7 @@ concurrency:
 jobs:
   decide:
     if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      github.repository == 'horizon-rust/horizon' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -75,7 +75,7 @@ jobs:
     # The Nightly is the release: nightly-build.yml builds the decided commit plus the reviewers' picks, signs it for
     # the Nightly channel and publishes it once its smoke test passed and no release-blocker is open.
     needs: decide
-    if: needs.decide.outputs.release == 'true' && needs.decide.outputs.dry_run != 'true'
+    if: github.repository == 'horizon-rust/horizon' && (needs.decide.outputs.release == 'true' && needs.decide.outputs.dry_run != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

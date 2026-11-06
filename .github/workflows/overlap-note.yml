@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: overlap note
 # One comment on a pull request naming the other open pull requests that close the same issue or change the same
 # functions, edited on every push (tools/ci/overlap_note.py, issue #3859).
@@ -14,7 +15,7 @@ permissions:
   contents: read
 jobs:
   note:
-    if: github.event.pull_request.base.ref == 'main'
+    if: github.repository == 'horizon-rust/horizon' && (github.event.pull_request.base.ref == 'main')
     # A newer push replaces the note being computed.
     concurrency:
       group: overlap-note-${{ github.event.pull_request.number }}

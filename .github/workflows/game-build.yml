@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: game build
 # Builds the game for every platform from `ref`: the Java exporters, then Linux and the Linux server, Windows x64
 # and ARM64 on GitHub, and macOS on the Mac mini's runner with a 1500-frame offscreen run of a new world (smoke-test.json): Apple
@@ -37,6 +38,7 @@ permissions:
   contents: read
 jobs:
   exporters:
+    if: github.repository == 'horizon-rust/horizon'
     # This runner holds the maintainer's own pinned Minecraft jars. Only our classes leave it. An untrusted build
     # goes to the Mac mini's nightly runner (macOS + horizon-nightly: ludovics-mac-mini-nightly, beside the one that
     # runs pull requests' parity jobs, so a nightly never waits behind their queue), never the release runner
@@ -81,6 +83,7 @@ jobs:
           retention-days: 3
 
   build:
+    if: github.repository == 'horizon-rust/horizon'
     needs: exporters
     name: build ${{ matrix.name }}
     # Windows ARM64 and musl are new: a failure never holds the other platforms' release (the signing job

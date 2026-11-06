@@ -265,6 +265,7 @@ struct Launcher {
     /// Import a game build (`build_import`, on the Versions page): whether one is being copied in,
     /// and why the last one failed.
     importing_build: bool,
+    sklauncher_importing: bool,
     import_error: Option<String>,
     /// Native mods (`native_mods`, on the Mods page): the build's step while it runs, why it
     /// failed, and the warning before a build while it is open, with the mods it names.
@@ -552,6 +553,9 @@ impl Launcher {
             }
         })
         .detach();
+        if let Err(e) = horizon_launcher::sklauncher::auto_import_accounts() {
+            eprintln!("SKlauncher import: {e}");
+        }
         let mut settings = Settings::load();
         i18n::set(settings.language());
         if settings.minecraft_dir.is_none() {
@@ -590,7 +594,9 @@ impl Launcher {
             settings_marked: 0,
             mods_sticky: sticky::Sticky::default(),
             long_list: cull::Cull::default(),
-            opening: (!settings.skip_opening).then(|| {
+            opening: (!settings.skip_opening
+                && !matches!(Accounts::load().player(), account::Player::Offline(_)))
+            .then(|| {
                 let focus = cx.focus_handle();
                 window.focus(&focus, cx);
                 Opening {
@@ -618,6 +624,7 @@ impl Launcher {
             disk_for: Vec::new(),
             install_error: None,
             importing_build: false,
+            sklauncher_importing: false,
             import_error: None,
             native_step: None,
             native_started: None,
@@ -1137,6 +1144,18 @@ impl Launcher {
                 // The page reads is_prepared when drawn; `changed` redraws it.
                 Msg::Reused(_) => self.installed = backend::installed(),
                 Msg::Keychain(said) => self.keychain = said,
+                Msg::SklauncherImported(result) => {
+                    self.sklauncher_importing = false;
+                    match result {
+                        Ok(_) => {
+                            self.accounts = Accounts::load();
+                            self.settings.instance = Settings::load().instance;
+                            self.reload_instances();
+                            self.sign_in_state = None;
+                        }
+                        Err(e) => self.sign_in_state = Some(SignInState::Done(Err(e))),
+                    }
+                }
                 Msg::Owner(owns) => self.owner = Some(owns),
                 Msg::AccountHead(uuid, url, face, failed) => {
                     self.profile_heads.loaded(&uuid, &url, face, failed)
@@ -1224,7 +1243,7 @@ impl Launcher {
                             }
                         };
                         // Past the gate by the developer option alone is no owner.
-                        if !self.settings.dev_offline {
+                        if file.is_some() {
                             self.owner = Some(true);
                         }
                         if let Some(file) = file {
@@ -3495,10 +3514,14 @@ impl Launcher {
                 tr("Game"),
                 Some(
                     div()
-                        .child(trf(
-                            "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.",
-                            &[("version", &java.minecraft)],
-                        ))
+                        .child(if java.local_install.is_some() {
+                            format!("{} · SKlauncher", tr("From my install"))
+                        } else {
+                            trf(
+                                "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.",
+                                &[("version", &java.minecraft)],
+                            )
+                        })
                         .into_any_element(),
                 ),
                 None,

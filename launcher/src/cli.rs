@@ -128,10 +128,12 @@ enum AccountCmd {
     },
     /// Play as this account, or as one of your offline names
     Select { who: String },
-    /// Play offline (LAN, offline-mode servers) beside a signed-in account that owns the game:
+    /// Play as a local profile (single player, LAN, offline-mode servers), without Microsoft:
     /// as NAME (kept to switch back to; 3 to 16 letters, digits or _), or as the name the game
     /// made up
     Offline { name: Option<String> },
+    /// Import local offline names and installed Java instances from SKlauncher (no tokens)
+    ImportSklauncher,
     /// Forget one of your offline names; its skin and cape go with it
     ForgetOffline { name: String },
     /// Show or set an offline name's skin and cape: a 64x64 (or 64x32) skin PNG, a 64x32 cape
@@ -1913,6 +1915,14 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
             .ok_or_else(|| format!("No signed-in account {who}. See `horizon-launcher account`."))
     };
     match action {
+        AccountCmd::ImportSklauncher => {
+            let imported = horizon_launcher::sklauncher::import_all()?;
+            if as_json {
+                json(serde_json::json!({"imported": imported}));
+            } else {
+                println!("Imported {imported} SKlauncher instances and local offline profiles.");
+            }
+        }
         AccountCmd::List => {
             if as_json {
                 json(serde_json::json!({

@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: cargo-horizon-mod
 # `cargo binstall --git https://github.com/horizon-rust/horizon cargo-horizon-mod` (#2120): binstall reads
 # [package.metadata.binstall] from crates/cargo-horizon-mod/Cargo.toml and downloads the archive this workflow
@@ -17,6 +18,7 @@ permissions:
   contents: read
 jobs:
   plan:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -26,6 +28,7 @@ jobs:
       - id: platforms
         run: echo "platforms=$(python3 -c 'import json, tools.horizon_mod_binstall as m; print(json.dumps(m.PLATFORMS))')" >> "$GITHUB_OUTPUT"
   build:
+    if: github.repository == 'horizon-rust/horizon'
     needs: plan
     name: build ${{ matrix.target }}
     strategy:
@@ -75,7 +78,7 @@ jobs:
           retention-days: 3
   publish:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.repository == 'horizon-rust/horizon' && (startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

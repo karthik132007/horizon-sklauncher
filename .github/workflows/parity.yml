@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: parity
 # The vanilla harnesses a pull request's changes can affect, on the Mac mini's runner or playhorizon's, which hold the
 # maintainer's own Minecraft files (Horizon never downloads the game). Called by ci.yml for pull requests from this repository
@@ -34,6 +35,7 @@ env:
 
 jobs:
   parity:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: ${{ inputs.full && fromJSON('["self-hosted", "horizon-game", "playhorizon"]') || fromJSON('["self-hosted", "horizon-game"]') }}
     # A change to core crates reruns ~350 harnesses: ~60-90 min on the Mac mini; on playhorizon (4 of its 8 vCPUs, 4
     # harnesses at a time) up to a few hours, and any pull request's job may land there.

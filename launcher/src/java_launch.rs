@@ -221,8 +221,25 @@ pub fn classpath(version: &Value, minecraft: &Path, os: &str) -> Result<Vec<Path
         if !allowed(&library["rules"], os, &[]) {
             continue;
         }
-        if let Some(path) = library["downloads"]["artifact"]["path"].as_str() {
-            let path = minecraft.join("libraries").join(mojang::relative(path)?);
+        let artifact = library["downloads"]["artifact"]["path"]
+            .as_str()
+            .map(str::to_string);
+        // Fabric/Quilt omit downloads; newer Mojang metadata also omits artifact.path.
+        // Both use Maven coordinates. Natives-only classifier entries have no ordinary jar.
+        let artifact = match artifact {
+            Some(path) => Some(path),
+            None if library["downloads"]["artifact"].is_object()
+                || (library.get("downloads").is_none() && library.get("natives").is_none()) =>
+            {
+                library["name"]
+                    .as_str()
+                    .map(crate::loaders::maven_path)
+                    .transpose()?
+            }
+            None => None,
+        };
+        if let Some(path) = artifact {
+            let path = minecraft.join("libraries").join(mojang::relative(&path)?);
             if !paths.contains(&path) {
                 paths.push(path);
             }
@@ -299,7 +316,7 @@ pub fn game_assets(version: &Value, minecraft: &Path, game_dir: &Path) -> Result
     let to = if index["map_to_resources"] == true {
         game_dir.join("resources")
     } else if index["virtual"] == true {
-        assets.join("virtual").join(mojang::relative(id)?)
+        game_dir.join("assets/virtual").join(mojang::relative(id)?)
     } else {
         return Ok(assets);
     };
@@ -378,7 +395,10 @@ pub fn command(version: &Value, launch: &Launch) -> Result<Command, String> {
         ("auth_session", format!("token:{}:{}", p.token, p.uuid)),
         ("auth_xuid", p.xuid.clone()),
         ("clientid", String::new()),
-        ("user_type", "msa".into()),
+        (
+            "user_type",
+            if p.token.is_empty() { "legacy" } else { "msa" }.into(),
+        ),
         ("user_properties", "{}".into()),
         ("version_name", id.to_string()),
         (

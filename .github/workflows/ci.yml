@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: checks
 # verify: every pull request and every push to main, on GitHub's runners (the repository is public). It is the
 # check main requires, so it never has a condition: a skipped job counts as passed, and every run of this workflow
@@ -34,6 +35,7 @@ jobs:
   # ours, `light` (the desktop paused) or `off` every job to GitHub's. On ours the build folder persists
   # (CARGO_TARGET_DIR, outside the checkout), so the apt packages, Python and the Rust cache steps are GitHub's only.
   verify:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: >-
       ${{ vars.SELF_HOSTED_CI != 'off' && vars.SELF_HOSTED_CI != 'light' && (vars.SELF_HOSTED_CI == 'all' ||
       github.event_name == 'pull_request' && (endsWith(format('{0}', github.event.pull_request.number), '0') ||
@@ -119,6 +121,7 @@ jobs:
   # changes it or a crate it builds is checked here, and so is every push to main: two pull requests can each pass
   # alone and break it together (#2059 and the registry ratings did, 2026-10-26).
   launcher:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: >-
       ${{ vars.SELF_HOSTED_CI != 'off' && vars.SELF_HOSTED_CI != 'light' && (vars.SELF_HOSTED_CI == 'all' ||
       github.event_name == 'pull_request' && (endsWith(format('{0}', github.event.pull_request.number), '0') ||
@@ -165,7 +168,7 @@ jobs:
   # 90-minute job. The Nightly and launcher releases build and check these binaries on every run.
   windows-arm64:
     name: Windows ARM64 game and launcher
-    if: github.event_name == 'workflow_dispatch'
+    if: github.repository == 'horizon-rust/horizon' && (github.event_name == 'workflow_dispatch')
     runs-on: windows-11-vs2026-arm
     timeout-minutes: 90
     env:
@@ -258,7 +261,7 @@ jobs:
   # (.github/workflows/parity-main.yml; releases wait for it). A pull request still runs them itself when it changes
   # a harness, an oracle, a probe or the runner, or carries the run-parity label (run-parity.yml, when it is added).
   parity-scope:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.repository == 'horizon-rust/horizon' && (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     # A git diff of this repository's own branch: one of our small runners (horizon-light, docs/ci-runners.md).
     runs-on: ${{ vars.SELF_HOSTED_CI != 'off' && fromJSON('["self-hosted", "linux", "horizon-light"]') || 'ubuntu-latest' }}
     outputs:
@@ -285,7 +288,7 @@ jobs:
           fi
   parity:
     needs: parity-scope
-    if: needs.parity-scope.outputs.run == 'true'
+    if: github.repository == 'horizon-rust/horizon' && (needs.parity-scope.outputs.run == 'true')
     uses: ./.github/workflows/parity.yml
     with:
       base: ${{ github.event.pull_request.base.sha }}
@@ -297,7 +300,7 @@ jobs:
   # game directory in HORIZON_MINECRAFT_DIR and the pinned server jar in
   # HORIZON_SERVER_JAR. Start them by hand: gh workflow run checks --ref <branch>.
   vanilla-parity:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.repository == 'horizon-rust/horizon' && (github.event_name == 'workflow_dispatch')
     runs-on: [self-hosted, linux, horizon-game]
     steps:
       - uses: actions/checkout@v7
@@ -645,7 +648,7 @@ jobs:
           RUSTUP_TOOLCHAIN: stable
         run: python tools/test_float_log_parity.py
   jfr-analysis:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.repository == 'horizon-rust/horizon' && (github.event_name == 'workflow_dispatch')
     runs-on: [self-hosted, linux, horizon-game]
     steps:
       - uses: actions/checkout@v7

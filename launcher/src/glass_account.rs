@@ -182,6 +182,7 @@ impl Launcher {
                     .child(tr("Offline names")),
             )
             .child(chips)
+            .child(self.sklauncher_import_button(cx).mt(px(12.)))
             .child(
                 ui::text(13., FontWeight::NORMAL, 0.5)
                     .mt(px(12.))

@@ -1,6 +1,6 @@
 //! The owner gate in the window (`horizon_launcher::account::launch`): the screen that asks for a
-//! Microsoft account that owns Minecraft: Java Edition. It covers the launcher once for players
-//! without one (those who played offline before the gate), and again whenever Play is refused.
+//! Microsoft account that owns Minecraft: Java Edition. It opens only when requested or when
+//! a Microsoft-mode launch is refused. Startup and local profiles do not require sign-in.
 //! The sign-in runs on it, code and all.
 use super::*;
 
@@ -9,7 +9,7 @@ impl Launcher {
     /// hasn't read it yet. The data question comes first.
     pub(crate) fn asking_owner(&self) -> bool {
         (self.owner_shown() == Some(false) || sign_in_preview())
-            && (self.owner_screen_open || !self.settings.owner_notice_seen || sign_in_preview())
+            && (self.owner_screen_open || sign_in_preview())
             && !self.asking_consent()
             && self.opening.is_none()
     }
@@ -18,7 +18,12 @@ impl Launcher {
     /// an owner (`dev_options`) hides the gate, as if the keychain hadn't answered yet.
     pub(crate) fn owner_shown(&self) -> Option<bool> {
         match self.owner {
-            Some(false) if self.settings.dev_offline => None,
+            Some(false)
+                if self.settings.dev_offline
+                    || matches!(self.accounts.player(), account::Player::Offline(_)) =>
+            {
+                None
+            }
             owner => owner,
         }
     }

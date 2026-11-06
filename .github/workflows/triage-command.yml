@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: triage command
 # `/close`, `/reopen`, `/label`, `/unlabel` comments: the trusted reviewers in .github/trusted-reviewers.txt (and
 # Ludovic) triage issues and pull requests without any repository role (docs/release-flow.md "Trusted reviewers",
@@ -16,11 +17,7 @@ jobs:
   command:
     # Every other comment skips here, before a runner starts.
     if: >-
-      github.event.comment.user.type != 'Bot' && (
-      startsWith(github.event.comment.body, '/close') ||
-      startsWith(github.event.comment.body, '/reopen') ||
-      startsWith(github.event.comment.body, '/label') ||
-      startsWith(github.event.comment.body, '/unlabel'))
+      github.repository == 'horizon-rust/horizon' && (github.event.comment.user.type != 'Bot' && ( startsWith(github.event.comment.body, '/close') || startsWith(github.event.comment.body, '/reopen') || startsWith(github.event.comment.body, '/label') || startsWith(github.event.comment.body, '/unlabel')))
     # One of our small runners (label horizon-light, docs/ci-runners.md): main's script only, as above.
     runs-on: ${{ vars.SELF_HOSTED_CI != 'off' && fromJSON('["self-hosted", "linux", "horizon-light"]') || 'ubuntu-latest' }}
     timeout-minutes: 5

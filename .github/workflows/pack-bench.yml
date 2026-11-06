@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: pack load bench
 # How long resource packs take to load: crates/horizon-client-render/examples/pack_load_bench.rs on generated packs
 # (no game files), on the branch and then on `base` with the branch's copy of the bench, on the same runner, so a pull
@@ -22,6 +23,7 @@ env:
 
 jobs:
   bench:
+    if: github.repository == 'horizon-rust/horizon'
     # Our checks runners (label horizon-checks, docs/ci-runners.md): the branch and the base on the same machine, as
     # the comparison needs. SELF_HOSTED_CI=light or off: GitHub's.
     runs-on: ${{ vars.SELF_HOSTED_CI != 'off' && vars.SELF_HOSTED_CI != 'light' && fromJSON('["self-hosted", "linux", "horizon-checks"]') || 'ubuntu-latest' }}

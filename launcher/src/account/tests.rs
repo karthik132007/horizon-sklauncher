@@ -691,41 +691,49 @@ fn any_owner_opens_the_gate_and_the_one_who_plays_brings_the_session() {
 }
 
 #[test]
-fn offline_names_play_only_beside_an_owner() {
+fn explicit_offline_profiles_need_no_owner_and_never_get_a_session() {
     let store = MemoryStore::default();
-    let mut accounts = Accounts::default();
-    let refused = accounts.play_as(&store, Player::Offline("Builder_1".into()));
-    assert_eq!(refused.unwrap_err(), OFFLINE_NEEDS_OWNER);
-    assert!(accounts.offline.is_empty());
     let mut accounts = signed_in(&store, &secrets("mc-token", true));
     accounts
-        .play_as(&store, Player::Offline("Builder_1".into()))
+        .play_as(&store, Player::Offline("pizza".into()))
         .unwrap();
-    // Signing the last owner out keeps the name, which no longer plays.
+    let (m, ep) = mock(|_| {});
+    let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, false).unwrap();
+    assert!(pass.session.is_none() && pass.owner.is_none());
+    let player = java_player_with(&ep, Some("test-client"), &store, &mut accounts).unwrap();
+    assert_eq!(player.name, "pizza");
+    assert_eq!(player.uuid, "dd725bd187ee336ca55315d76155f1b0");
+    assert!(player.token.is_empty() && player.xuid.is_empty());
+    assert!(m.lock().unwrap().log.is_empty());
     accounts.remove(&store, UUID).unwrap();
-    assert_eq!(accounts.offline, ["Builder_1"]);
-    assert_eq!(accounts.player(), Player::Offline("Builder_1".into()));
-    assert!(!accounts.has_owner(&store));
-    let (_, ep) = mock(|_| {});
-    assert!(launch(&ep, Some("test-client"), &store, &mut accounts).is_err());
+    assert!(launch_for_game(&ep, None, &store, &mut accounts, false).is_ok());
     assert!(accounts
-        .play_as(&store, Player::Offline("Builder_2".into()))
+        .play_as(&store, Player::Offline("bad name".into()))
         .is_err());
 }
 
 #[test]
-fn the_developer_option_off_is_the_owner_gate() {
+fn microsoft_and_download_modes_keep_the_owner_gate() {
     let store = MemoryStore::default();
-    let mut accounts = Accounts::default();
-    let refused = accounts.play_as_with(&store, Player::Offline("Builder_1".into()), false);
-    assert_eq!(refused.unwrap_err(), OFFLINE_NEEDS_OWNER);
-    assert_eq!(accounts, Accounts::default());
     let (_, ep) = mock(|m| m.owns_game = false);
-    let refused = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, false);
-    assert_eq!(refused.unwrap_err(), NoOwner);
+    let mut accounts = Accounts::default();
+    assert_eq!(
+        launch_for_game(&ep, Some("test-client"), &store, &mut accounts, false).unwrap_err(),
+        NoOwner
+    );
+    accounts
+        .play_as(&store, Player::Offline("Builder_1".into()))
+        .unwrap();
+    // Downloads always use the strict gate, even with a selected offline profile.
+    assert_eq!(
+        launch(&ep, Some("test-client"), &store, &mut accounts).unwrap_err(),
+        NoOwner
+    );
     let mut accounts = signed_in(&store, &secrets("mc-token", true));
-    let refused = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, false);
-    assert_eq!(refused.unwrap_err(), NoOwner);
+    assert_eq!(
+        launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap_err(),
+        NoOwner
+    );
 }
 
 #[test]
@@ -750,8 +758,8 @@ fn the_developer_option_plays_offline_names_without_an_owner() {
         .unwrap();
     let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap();
     assert!(pass.session.is_none() && pass.owner.is_none());
-    assert!(!accounts.has_owner(&store));
-    // A real owner is still found and brings what it brings without the option.
+    assert!(accounts.has_owner(&store)); // offline launches never inspect or renew it
+                                         // A real owner is still found and brings what it brings without the option.
     let (_, ep) = mock(|_| {});
     let mut accounts = signed_in(&store, &secrets("mc-token", true));
     let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap();

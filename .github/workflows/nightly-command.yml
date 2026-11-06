@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: nightly command
 # `/nightly …` comments: the trusted reviewers in .github/trusted-reviewers.txt (and Ludovic) pick the pull requests
 # the Nightly holds (docs/release-flow.md "Nightly channel", tools/ci/nightly_set.py). This job only checks who asked,
@@ -18,7 +19,7 @@ permissions:
 jobs:
   command:
     # Every other comment skips here, before a runner starts.
-    if: startsWith(github.event.comment.body, '/nightly') && github.event.comment.user.type != 'Bot'
+    if: github.repository == 'horizon-rust/horizon' && (startsWith(github.event.comment.body, '/nightly') && github.event.comment.user.type != 'Bot')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

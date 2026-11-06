@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: cancel-on-close
 # A closed or merged pull request's queued and running checks free the runners at once.
 # pull_request_target so the token can cancel runs of pull requests from forks too;
@@ -9,6 +10,7 @@ permissions:
   actions: write
 jobs:
   cancel:
+    if: github.repository == 'horizon-rust/horizon'
     # One of our small runners (horizon-light), out of GitHub's pool: no checkout, no code of the pull request
     # (docs/ci-runners.md). SELF_HOSTED_CI=off: GitHub's runners.
     runs-on: ${{ vars.SELF_HOSTED_CI != 'off' && fromJSON('["self-hosted", "linux", "horizon-light"]') || 'ubuntu-latest' }}

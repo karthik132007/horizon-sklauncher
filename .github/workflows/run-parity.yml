@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: run-parity
 # A fork's pull request runs the parity job (parity.yml) on the Mac mini only when a maintainer who has read the
 # change adds the run-parity label: once, on the commit the pull request has then. Remove the label and add it
@@ -21,7 +22,7 @@ env:
 
 jobs:
   parity:
-    if: github.event.label.name == 'run-parity'
+    if: github.repository == 'horizon-rust/horizon' && (github.event.label.name == 'run-parity')
     uses: ./.github/workflows/parity.yml
     with:
       base: ${{ github.event.pull_request.base.sha }}

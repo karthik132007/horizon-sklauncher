@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: nightly build
 run-name: nightly build${{ inputs.request && format(' (request {0})', inputs.request) || '' }}
 # The Nightly, the only build Horizon ships since 2026-10-28 (docs/release-flow.md "Nightly"; Ludovic). When the batch
@@ -74,6 +75,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   pick:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -139,7 +141,7 @@ jobs:
 
   build:
     needs: pick
-    if: needs.pick.outputs.build == 'true'
+    if: github.repository == 'horizon-rust/horizon' && (needs.pick.outputs.build == 'true')
     uses: ./.github/workflows/game-build.yml
     with:
       ref: ${{ needs.pick.outputs.sha }}
@@ -149,6 +151,7 @@ jobs:
       trusted: false  # it can hold unreviewed pull requests: their own cache key, never saved, not the release runner
 
   sign:
+    if: github.repository == 'horizon-rust/horizon'
     needs: [pick, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -198,6 +201,7 @@ jobs:
           retention-days: 3
 
   publish:
+    if: github.repository == 'horizon-rust/horizon'
     needs: [pick, build, sign]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -286,7 +290,7 @@ jobs:
   answer:
     # Tells the thread that asked for this build how it ended. A conflict `pick` already explained there.
     needs: [pick, build, sign, publish]
-    if: always() && inputs.issue != '' && needs.pick.result == 'success'
+    if: github.repository == 'horizon-rust/horizon' && (always() && inputs.issue != '' && needs.pick.result == 'success')
     # One comment, no checkout and no secret: one of our small runners (label horizon-light, docs/ci-runners.md).
     runs-on: ${{ vars.SELF_HOSTED_CI != 'off' && fromJSON('["self-hosted", "linux", "horizon-light"]') || 'ubuntu-latest' }}
     timeout-minutes: 5

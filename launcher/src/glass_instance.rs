@@ -399,6 +399,12 @@ impl Launcher {
             NewKind::Horizon => {
                 tr("Its own worlds and packs. Your options and player name come along.")
             }
+            _ if editing
+                .and_then(|i| i.java.as_ref())
+                .is_some_and(|j| j.local_install.is_some()) =>
+            {
+                tr("From my install")
+            }
             _ => tr("Play downloads the game from Mojang the first time, with the Java it needs."),
         };
         // One made in the launcher can switch what it plays; the game's home and modpacks

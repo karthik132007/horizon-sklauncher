@@ -1,3 +1,4 @@
+# Community fork: upstream automation jobs only run in the upstream repository.
 name: native hook stamp
 # Opens a PR that numbers pending fragments after they merge. Only pushes to
 # main run main's own tool; fragments are read as data, not PR code.
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   stamp:
-    if: github.repository == 'horizon-rust/horizon'
+    if: github.repository == 'horizon-rust/horizon' && (github.repository == 'horizon-rust/horizon')
     runs-on: ubuntu-latest
     permissions:
       contents: write
