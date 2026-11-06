@@ -269,10 +269,16 @@ mod tests {
     }
     #[test]
     fn profiles_reject_relative_directories_and_traversal() {
-        let data = r#"{"instances":[{"name":"Fabric","versionId":"fabric-loader-0.19.5-26.3","directory":"/tmp/game"},{"name":"unsafe","versionId":"../../escape","directory":"/tmp/game"},{"name":"relative","versionId":"26.3","directory":"game"}]}"#;
-        let found = profiles(data).unwrap();
+        let absolute = std::env::temp_dir().join("sklauncher-profile-game");
+        let data = serde_json::json!({"instances":[
+            {"name":"Fabric","versionId":"fabric-loader-0.19.5-26.3","directory":absolute},
+            {"name":"unsafe","versionId":"../../escape","directory":absolute},
+            {"name":"relative","versionId":"26.3","directory":"game"}
+        ]});
+        let found = profiles(&data.to_string()).unwrap();
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].version_id, "fabric-loader-0.19.5-26.3");
+        assert_eq!(found[0].directory, absolute);
         assert!(profiles(r#"{"profiles":{}}"#).is_err());
     }
     #[test]

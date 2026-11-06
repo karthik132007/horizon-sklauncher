@@ -1,10 +1,25 @@
 name: Build SKlauncher edition (manual)
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build
+        type: choice
+        options: [windows, linux, all]
+        default: windows
+      publish_windows:
+        description: Upload checked Windows files to the selected existing release
+        type: boolean
+        default: true
+      release_tag:
+        description: Existing release tag for the Windows download
+        type: string
+        default: sklauncher-v0.1.0
 permissions:
   contents: read
 jobs:
   linux:
+    if: inputs.platform == 'linux' || inputs.platform == 'all'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -21,3 +36,60 @@ jobs:
         with:
           name: horizon-sklauncher-linux-x86_64
           path: dist/sklauncher/*
+  windows:
+    if: inputs.platform == 'windows' || inputs.platform == 'all'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      RUSTFLAGS: -C target-feature=+crt-static
+      HORIZON_LAUNCHER_NO_SELF_UPDATE: '1'
+      HORIZON_NO_AUDIO: '1'
+      HORIZON_NO_KEYCHAIN: '1'
+      HORIZON_TELEMETRY_URL: 'off'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: launcher
+          shared-key: sklauncher-windows-x64-static
+      - name: Build Windows x64 launcher
+        run: |
+          cargo build --release --locked --manifest-path launcher/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check Windows architecture and system DLLs
+        run: |
+          python tools/check_pe_arch.py x64 launcher/target/release/horizon-launcher.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/check_imports.py launcher/target/release/horizon-launcher.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Profile parser and offline UUID tests
+        run: |
+          cargo test --release --locked --manifest-path launcher/Cargo.toml --lib sklauncher::
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package launcher-only ZIP and checksum
+        run: ./packaging/sklauncher/windows/package.ps1
+      - name: Smoke test the extracted Windows download and installer
+        run: ./packaging/sklauncher/windows/smoke.ps1 -Archive dist/sklauncher-windows/horizon-sklauncher-windows-x86_64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: horizon-sklauncher-windows-x86_64
+          path: dist/sklauncher-windows/*
+          if-no-files-found: error
+      - name: Publish checked Windows assets
+        if: inputs.publish_windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release view "$env:RELEASE_TAG" --repo "$env:GITHUB_REPOSITORY"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release upload "$env:RELEASE_TAG" dist/sklauncher-windows/horizon-sklauncher-windows-x86_64.zip dist/sklauncher-windows/SHA256SUMS-windows.txt --repo "$env:GITHUB_REPOSITORY" --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
